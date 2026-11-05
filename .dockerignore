@@ -1,0 +1,11 @@
+.git
+.github
+.devcontainer
+mlruns
+mlflow.db
+predictions
+tests
+data
+scripts
+**/__pycache__
+*.egg-info

@@ -1,0 +1,9 @@
+# produced by running the pipeline, never committed
+mlflow.db
+mlruns/
+model_export/
+predictions/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.venv/

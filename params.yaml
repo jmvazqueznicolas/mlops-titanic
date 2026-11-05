@@ -1,0 +1,16 @@
+# Everything that defines a training run and is not code or data lives here.
+# Change a value, retrain, and the tracker records the new value with the run.
+split:
+  test_size: 0.25        # share of the historical data held out for evaluation
+  seed: 42               # same seed -> same split -> runs are comparable
+
+models:
+  logreg:
+    C: 1.0
+  random_forest:
+    n_estimators: 300
+    max_depth: 6
+    seed: 42
+
+promotion:
+  alpha: 0.05            # a challenger must beat the champion with McNemar p < alpha
