@@ -25,3 +25,42 @@ jobs:
         run: python -m titanic_mlops.contract data/titanic.csv --training
       - name: Tests
         run: pytest -q
+
+  docker:
+    # Builds the serving image exactly as in class (train -> promote -> export -> build)
+    # and checks the running container: health, a prediction, and a 422 on bad input.
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+      - name: Train, promote and export the champion
+        run: |
+          make train-logreg
+          make promote VERSION=1
+          make export
+      - name: Build the image
+        run: make docker-build
+      - name: Run the container and call the API
+        run: |
+          docker run -d --name api -p 8000:8000 titanic-api:latest
+          for i in $(seq 1 30); do curl -sf localhost:8000/health && break; sleep 2; done
+          curl -sf localhost:8000/health | grep -q '"model_version":1'
+          curl -sf -X POST localhost:8000/predict -H 'Content-Type: application/json' \
+            -d '{"Pclass": 1, "Sex": "female", "Age": 29, "SibSp": 0, "Parch": 0, "Fare": 80, "Embarked": "S"}' | tee out.json
+          grep -q '"survival_probability":0.9239' out.json
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:8000/predict -H 'Content-Type: application/json' \
+            -d '{"Pclass": 3, "Sex": "Male", "Age": 29, "SibSp": 0, "Parch": 0, "Fare": 8}')
+          test "$code" = "422"
+      - name: Container logs
+        if: always()
+        run: docker logs api || true
